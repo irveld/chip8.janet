@@ -1,10 +1,12 @@
 #!/usr/bin/env janet
 
+(import emu/chip)
+
 (defn show-usage []
   (print "Usage: emu <path-to-rom>.ch8"))
 
 (defn main [& args]
   (if-let [_ (has-key? args 1)
            rom (args 1)]
-    (pp (slurp rom)
+    (chip/run (slurp rom))
     (show-usage)))
