@@ -4,7 +4,8 @@
   :license "BSD-3"
   :dependencies
   ["https://github.com/janet-lang/spork.git"
-   "https://github.com/janet-lang/jaylib.git"])
+   "https://github.com/janet-lang/jaylib.git"
+   "file:///home/irveld/dev/util/prelude.janet/"]) # TODO: Git repo
 
 (declare-source
   :prefix "emu"
