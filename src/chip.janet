@@ -55,6 +55,12 @@
          [addr V PC I pixel] (map |(partial $ ,chip) fs)]
      ,;body))
 
+### Opcodes
+
+(defn op-00E0 [chip]
+  (print "CLS")
+  (buffer/fill (chip :display) 0))
+
 ### Main cycle
 
 (defn fetch [chip]
@@ -73,10 +79,11 @@
      |(band op 0x000F)
      |(brshift (band op 0x00F0) 4)
      |(brshift (band op 0x0F00) 8)])
-  :TODO
-  (printf "%04X :: (PC=%04X)"
-    op
-    (- (chip :PC) 2)))
+  (def nibbles
+    (seq [shift :down-to (12 0 4)]
+      (band 0x000F (brshift op shift))))
+  ((match nibbles
+     [0 0 0xE 0] op-00E0) chip))
 
 (defn tick [chip]
   :TODO)
