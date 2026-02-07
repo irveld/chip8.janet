@@ -71,6 +71,11 @@
   (with-chip chip
     (V x kk)))
 
+(defn op-7xkk [chip x kk]
+  (printf "ADD V%X, 0x%02X" x kk)
+  (with-chip chip
+    (V x (+ (V x) kk))))
+
 ### Main cycle
 
 (defn fetch [chip]
@@ -97,6 +102,7 @@
       [0 0 0xE 0] [op-00E0]
       [1 _ _ _] [op-1nnn nnn]
       [6 _ _ _] [op-6xkk x kk]
+      [7 _ _ _] [op-7xkk x kk]
       _ [identity]))
  (instr chip ;args))
 
