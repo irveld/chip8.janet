@@ -19,6 +19,42 @@
     :delay 100
     :sound 20})
 
+### Helpers for reading and writing chip data
+
+(defn access [chip dst &opt val]
+  (if (nil? val)
+    (get-in chip dst)
+    (put-in chip dst val)))
+
+(defn addr [chip nnn &opt val]
+  (access chip [:mem nnn] val))
+
+(defn V [chip &opt reg val]
+  (if (nil? reg)
+    (access chip [:V] val)
+    (access chip [:V reg] val)))
+
+(defn PC [chip &opt val]
+  (access chip [:PC] val))
+
+(defn I [chip &opt val]
+  (access chip [:I] val))
+
+(defn pixel [chip &opt pos action]
+  (def buf (chip :display))
+  (if (nil? pos) buf
+    (let [i (display/coord->index ;pos +width+ +height+)]
+      (case action
+        :toggle (buffer/bit-toggle buf i)
+        :on (buffer/bit-set buf i)
+        :off (buffer/bit-clear buf i)
+        (buffer/bit buf i)))))
+
+(defmacro with-chip [chip & body]
+  ~(let [fs [addr V PC I pixel]
+         [addr V PC I pixel] (map |(partial $ ,chip) fs)]
+     ,;body))
+
 ### Main cycle
 
 (defn fetch [chip]
