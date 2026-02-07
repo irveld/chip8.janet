@@ -81,6 +81,22 @@
   (with-chip chip
     (I nnn)))
 
+(defn op-Dxyn [chip x y n]
+  (printf "DRW V%X, V%X, 0x%X" x y n)
+  (defn sprite-bit? [sprite col]
+    (not (zero? (band sprite (brshift 0x80 col)))))
+  (with-chip chip
+    (V 0xF 0)
+    (loop [row :range [0 n]
+           :let [sprite (addr (+ row (I)))]
+           col :range [0 8]
+           :when (sprite-bit? sprite col)
+           :let [[Vx Vy] (map V [x y])
+                 pos (map + [col row] [Vx Vy])]]
+      (when (pixel pos)
+        (V 0xF 1))
+      (pixel pos :toggle))))
+
 ### Main cycle
 
 (defn fetch [chip]
@@ -109,6 +125,7 @@
       [6 _ _ _] [op-6xkk x kk]
       [7 _ _ _] [op-7xkk x kk]
       [0xA _ _ _] [op-Annn nnn]
+      [0xD _ _ _] [op-Dxyn x y n]
       _ [identity]))
  (instr chip ;args))
 
