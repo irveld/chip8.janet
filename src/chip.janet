@@ -66,6 +66,11 @@
   (with-chip chip
     (PC nnn)))
 
+(defn op-6xkk [chip x kk]
+  (printf "LD V%X, 0x%02X" x kk)
+  (with-chip chip
+    (V x kk)))
+
 ### Main cycle
 
 (defn fetch [chip]
@@ -91,6 +96,7 @@
    (match nibbles
       [0 0 0xE 0] [op-00E0]
       [1 _ _ _] [op-1nnn nnn]
+      [6 _ _ _] [op-6xkk x kk]
       _ [identity]))
  (instr chip ;args))
 
