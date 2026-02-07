@@ -76,6 +76,11 @@
   (with-chip chip
     (V x (+ (V x) kk))))
 
+(defn op-Annn [chip nnn]
+  (printf "LD I, 0x%03X" nnn)
+  (with-chip chip
+    (I nnn)))
+
 ### Main cycle
 
 (defn fetch [chip]
@@ -103,6 +108,7 @@
       [1 _ _ _] [op-1nnn nnn]
       [6 _ _ _] [op-6xkk x kk]
       [7 _ _ _] [op-7xkk x kk]
+      [0xA _ _ _] [op-Annn nnn]
       _ [identity]))
  (instr chip ;args))
 
