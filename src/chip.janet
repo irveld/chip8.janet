@@ -92,6 +92,7 @@
   :TODO)
 
 (defn cycle [chip op]
+  (ev/sleep (/ 1 60))
   (doto chip
     (execute op)
     (tick)
