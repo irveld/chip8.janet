@@ -61,6 +61,11 @@
   (print "CLS")
   (buffer/fill (chip :display) 0))
 
+(defn op-1nnn [chip nnn]
+  (printf "JP 0x%03X" nnn)
+  (with-chip chip
+    (PC nnn)))
+
 ### Main cycle
 
 (defn fetch [chip]
@@ -73,17 +78,21 @@
     op))
 
 (defn execute [chip op]
-  (def [addr kk n y x]
-    [|(band op 0x0FFF)
-     |(band op 0x00FF)
-     |(band op 0x000F)
-     |(brshift (band op 0x00F0) 4)
-     |(brshift (band op 0x0F00) 8)])
-  (def nibbles
-    (seq [shift :down-to (12 0 4)]
-      (band 0x000F (brshift op shift))))
-  ((match nibbles
-     [0 0 0xE 0] op-00E0) chip))
+  (def [nnn kk n y x]
+    [(band op 0x0FFF)
+     (band op 0x00FF)
+     (band op 0x000F)
+     (brshift (band op 0x00F0) 4)
+     (brshift (band op 0x0F00) 8)])
+ (def nibbles
+   (seq [shift :down-to (12 0 4)]
+     (band 0x000F (brshift op shift))))
+ (def [instr & args]
+   (match nibbles
+      [0 0 0xE 0] [op-00E0]
+      [1 _ _ _] [op-1nnn nnn]
+      _ [identity]))
+ (instr chip ;args))
 
 (defn tick [chip]
   :TODO)
