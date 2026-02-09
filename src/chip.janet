@@ -115,6 +115,52 @@
   (with-chip chip
     (V x (+ (V x) kk))))
 
+(defn- op-8xy0 [chip x y]
+  (printf "LD V%X, V%X" x y)
+  (with-chip chip
+    (V x (V y))))
+
+(defn- op-8xy1 [chip x y]
+  (printf "OR V%X, V%X" x y)
+  (with-chip chip
+    (V x (bor (V x) (V y)))))
+
+(defn- op-8xy2 [chip x y]
+  (printf "AND V%X, V%X" x y)
+  (with-chip chip
+    (V x (band (V x) (V y)))))
+
+(defn- op-8xy3 [chip x y]
+  (printf "XOR V%X, V%X" x y)
+  (with-chip chip
+    (V x (bxor (V x) (V y)))))
+
+(defn- op-8xy4 [chip x y]
+  (printf "ADD V%X, V%X" x y)
+  (with-chip chip
+    (let [result (+ (V x) (V y))
+          carry (if (> result 255) 1 0)]
+      (V 0xF carry)
+      (V x result))))
+
+(defn- op-8xy5 [chip x y]
+  (printf "SUB V%X, V%X" x y)
+  (with-chip chip
+    (let [[Vx Vy] (map V [x y])
+          result (- Vx Vy)
+          borrow (if (> Vx Vy) 1 0)]
+      (V 0xF borrow)
+      (V x result))))
+
+(defn- op-8xy7 [chip x y]
+  (printf "SUBN V%X, V%X" x y)
+  (with-chip chip
+    (let [[Vx Vy] (map V [x y])
+          result (- Vy Vx)
+          borrow (if (> Vy Vx) 1 0)]
+      (V 0xF borrow)
+      (V x result))))
+
 (defn- op-9xy0 [chip x y]
   (printf "SNE V%02X, V%02X" x y)
   (with-chip chip
@@ -180,6 +226,13 @@
       [5 _ _ 0] [op-5xy0 x y]
       [6 _ _ _] [op-6xkk x kk]
       [7 _ _ _] [op-7xkk x kk]
+      [8 _ _ 0] [op-8xy0 x y]
+      [8 _ _ 1] [op-8xy1 x y]
+      [8 _ _ 2] [op-8xy2 x y]
+      [8 _ _ 3] [op-8xy3 x y]
+      [8 _ _ 4] [op-8xy4 x y]
+      [8 _ _ 5] [op-8xy5 x y]
+      [8 _ _ 7] [op-8xy7 x y]
       [9 _ _ 0] [op-9xy0 x y]
       [0xA _ _ _] [op-Annn nnn]
       [0xB _ _ _] [op-Bnnn nnn]
