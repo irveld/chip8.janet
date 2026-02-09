@@ -7,6 +7,6 @@
 
 (defn main [& args]
   (if-let [_ (has-key? args 1)
-           rom (args 1)]
-    (chip/run (slurp rom))
+           rom-path (args 1)]
+    (chip/run rom-path)
     (show-usage)))
