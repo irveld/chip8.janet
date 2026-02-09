@@ -88,8 +88,9 @@
 (defn- op-2nnn [chip nnn]
   (printf "CALL 0x%03X" nnn)
   (with-chip chip
-   (SP (inc (SP)))
-   (stack (PC))))
+    (SP (inc (SP)))
+    (stack (PC))
+    (PC nnn)))
 
 (defn- op-3xkk [chip x kk]
   (printf "SE V%02X, 0x%03X" x kk)
