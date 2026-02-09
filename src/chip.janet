@@ -32,6 +32,9 @@
 (defn- addr [chip nnn &opt val]
   (access chip [:mem nnn] val))
 
+(defn- stack [chip &opt val]
+  (access chip [:stack (chip :SP)] val))
+
 (defn- V [chip &opt reg val]
   (if (nil? reg)
     (access chip [:V] val)
@@ -39,6 +42,9 @@
 
 (defn- PC [chip &opt val]
   (access chip [:PC] val))
+
+(defn- SP [chip &opt val]
+  (access chip [:SP] val))
 
 (defn- I [chip &opt val]
   (access chip [:I] val))
@@ -54,20 +60,32 @@
         (buffer/bit buf i)))))
 
 (defmacro- with-chip [chip & body]
-  ~(let [fs [addr V PC I pixel]
-         [addr V PC I pixel] (map |(partial $ ,chip) fs)]
+  ~(let [fs [addr stack V PC SP I pixel]
+         [addr stack V PC SP I pixel] (map |(partial $ ,chip) fs)]
      ,;body))
 
 ### Opcodes
 
 (defn- op-00E0 [chip]
-  (print "CLS")
+  (printf "CLS")
   (buffer/fill (chip :display) 0))
+
+(defn- op-00EE [chip]
+  (printf "RET")
+  (with-chip chip
+    (PC (stack))
+    (SP (dec (SP)))))
 
 (defn- op-1nnn [chip nnn]
   (printf "JP 0x%03X" nnn)
   (with-chip chip
     (PC nnn)))
+
+(defn- op-2nnn [chip nnn]
+  (printf "CALL 0x%03X" nnn)
+  (with-chip chip
+   (SP (inc (SP)))
+   (stack (PC))))
 
 (defn- op-3xkk [chip x kk]
   (printf "SE V%02X, 0x%03X" x kk)
@@ -108,6 +126,11 @@
   (with-chip chip
     (I nnn)))
 
+(defn- op-Bnnn [chip nnn]
+  (printf "JP V0, 0x%03X" nnn)
+  (with-chip chip
+    (PC (+ nnn (V 0)))))
+
 (defn- op-Dxyn [chip x y n]
   (printf "DRW V%X, V%X, 0x%X" x y n)
   (defn sprite-bit? [sprite col]
@@ -145,17 +168,21 @@
  (def nibbles
    (seq [shift :down-to (12 0 4)]
      (band 0x000F (brshift op shift))))
+ (print (string ;(map |(string/format "%X" $) nibbles)))
  (def [instr & args]
    (match nibbles
       [0 0 0xE 0] [op-00E0]
+      [0 0 0xE 0xE] [op-00EE]
       [1 _ _ _] [op-1nnn nnn]
+      [2 _ _ _] [op-2nnn nnn]
       [3 _ _ _] [op-3xkk x kk]
       [4 _ _ _] [op-4xkk x kk]
-      [5 _ _ 0x0] [op-5xy0 x y]
+      [5 _ _ 0] [op-5xy0 x y]
       [6 _ _ _] [op-6xkk x kk]
       [7 _ _ _] [op-7xkk x kk]
       [9 _ _ 0] [op-9xy0 x y]
       [0xA _ _ _] [op-Annn nnn]
+      [0xB _ _ _] [op-Bnnn nnn]
       [0xD _ _ _] [op-Dxyn x y n]
       _ [identity]))
  (instr chip ;args))
