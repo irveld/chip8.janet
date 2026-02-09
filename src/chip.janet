@@ -29,6 +29,9 @@
     (get-in chip dst)
     (put-in chip dst val)))
 
+(defn- mem [chip &opt val]
+  (access chip [:mem] val))
+
 (defn- addr [chip nnn &opt val]
   (access chip [:mem nnn] val))
 
@@ -60,8 +63,9 @@
         (buffer/bit buf i)))))
 
 (defmacro- with-chip [chip & body]
-  ~(let [fs [addr stack V PC SP I pixel]
-         [addr stack V PC SP I pixel] (map |(partial $ ,chip) fs)]
+  ~(let [fs [mem addr stack V PC SP I pixel]
+         f |(partial $ ,chip)
+         [mem addr stack V PC SP I pixel] (map f fs)]
      ,;body))
 
 ### Opcodes
@@ -209,6 +213,20 @@
         (V 0xF 1))
       (pixel pos :toggle))))
 
+(defn- op-Fx55 [chip x]
+  (printf "LD [I], V%X" x)
+  (with-chip chip
+    (let [start 0
+          end (inc x)]
+      (buffer/blit (mem) (V) (I) start end))))
+
+(defn- op-Fx65 [chip x]
+  (printf "LD V%X, [I]" x)
+  (with-chip chip
+    (let [start (I)
+          end (+ start (inc x))]
+      (buffer/blit (V) (mem) 0 start end))))
+
 ### Main cycle
 
 (defn- fetch [chip]
@@ -255,6 +273,8 @@
       [0xA _ _ _] [op-Annn nnn]
       [0xB _ _ _] [op-Bnnn nnn]
       [0xD _ _ _] [op-Dxyn x y n]
+      [0xF _ 5 5] [op-Fx55 x]
+      [0xF _ 6 5] [op-Fx65 x]
       _ [identity]))
  (instr chip ;args))
 
