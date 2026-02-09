@@ -5,7 +5,7 @@
         index (+ x (* y width))]
     index))
 
-(defn rgb255->rgb1 [r g b]
+(defn- rgb255->rgb1 [r g b]
   (map |(/ $ 255) [r g b]))
 
 (defn- palette [key]

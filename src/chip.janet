@@ -7,7 +7,7 @@
 
 ### Initialization
 
-(defn load [rom]
+(defn- load [rom]
   @{:mem (buffer/blit (buffer/new-filled 4096 0) rom 0x200)
     :stack (array/new 16)
 
@@ -24,26 +24,26 @@
 
 ### Helpers for reading and writing chip data
 
-(defn access [chip dst &opt val]
+(defn- access [chip dst &opt val]
   (if (nil? val)
     (get-in chip dst)
     (put-in chip dst val)))
 
-(defn addr [chip nnn &opt val]
+(defn- addr [chip nnn &opt val]
   (access chip [:mem nnn] val))
 
-(defn V [chip &opt reg val]
+(defn- V [chip &opt reg val]
   (if (nil? reg)
     (access chip [:V] val)
     (access chip [:V reg] val)))
 
-(defn PC [chip &opt val]
+(defn- PC [chip &opt val]
   (access chip [:PC] val))
 
-(defn I [chip &opt val]
+(defn- I [chip &opt val]
   (access chip [:I] val))
 
-(defn pixel [chip &opt pos action]
+(defn- pixel [chip &opt pos action]
   (def buf (chip :display))
   (if (nil? pos) buf
     (let [i (display/coord->index ;pos +width+ +height+)]
@@ -53,38 +53,38 @@
         :off (buffer/bit-clear buf i)
         (buffer/bit buf i)))))
 
-(defmacro with-chip [chip & body]
+(defmacro- with-chip [chip & body]
   ~(let [fs [addr V PC I pixel]
          [addr V PC I pixel] (map |(partial $ ,chip) fs)]
      ,;body))
 
 ### Opcodes
 
-(defn op-00E0 [chip]
+(defn- op-00E0 [chip]
   (print "CLS")
   (buffer/fill (chip :display) 0))
 
-(defn op-1nnn [chip nnn]
+(defn- op-1nnn [chip nnn]
   (printf "JP 0x%03X" nnn)
   (with-chip chip
     (PC nnn)))
 
-(defn op-6xkk [chip x kk]
+(defn- op-6xkk [chip x kk]
   (printf "LD V%X, 0x%02X" x kk)
   (with-chip chip
     (V x kk)))
 
-(defn op-7xkk [chip x kk]
+(defn- op-7xkk [chip x kk]
   (printf "ADD V%X, 0x%02X" x kk)
   (with-chip chip
     (V x (+ (V x) kk))))
 
-(defn op-Annn [chip nnn]
+(defn- op-Annn [chip nnn]
   (printf "LD I, 0x%03X" nnn)
   (with-chip chip
     (I nnn)))
 
-(defn op-Dxyn [chip x y n]
+(defn- op-Dxyn [chip x y n]
   (printf "DRW V%X, V%X, 0x%X" x y n)
   (defn sprite-bit? [sprite col]
     (not (zero? (band sprite (brshift 0x80 col)))))
@@ -102,7 +102,7 @@
 
 ### Main cycle
 
-(defn fetch [chip]
+(defn- fetch [chip]
   (defn nibble []
     (let [pc (dec (++ (chip :PC)))]
       ((chip :mem) pc)))
@@ -111,7 +111,7 @@
   (generate [op :iterate (byte) :until (zero? op)]
     op))
 
-(defn execute [chip op]
+(defn- execute [chip op]
   (def [nnn kk n y x]
     [(band op 0x0FFF)
      (band op 0x00FF)
@@ -132,13 +132,15 @@
       _ [identity]))
  (instr chip ;args))
 
-(defn tick [chip]
+(defn- tick [chip]
   :TODO)
 
-(defn render [chip]
-  (display/draw (chip :display) +width+ +height+ +scale+))
+(defn- render [chip]
+  (display/draw (chip :display)
+    +width+ +height+
+    +scale+))
 
-(defn cycle [chip op]
+(defn- cycle [chip op]
   (ev/sleep (/ 1 60))
   (doto chip
     (execute op)
