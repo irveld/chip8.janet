@@ -69,6 +69,24 @@
   (with-chip chip
     (PC nnn)))
 
+(defn- op-3xkk [chip x kk]
+  (printf "SE V%02X, 0x%03X" x kk)
+  (with-chip chip
+    (when (= (V x) kk)
+      (PC (+ (PC) 2)))))
+
+(defn- op-4xkk [chip x kk]
+  (printf "SNE V%02X, 0x%03X" x kk)
+  (with-chip chip
+    (when (not= (V x) kk)
+      (PC (+ (PC) 2)))))
+
+(defn- op-5xy0 [chip x y]
+  (printf "SE V%02X, V%02X" x y)
+  (with-chip chip
+    (when (= (V x) (V y))
+      (PC (+ (PC) 2)))))
+
 (defn- op-6xkk [chip x kk]
   (printf "LD V%X, 0x%02X" x kk)
   (with-chip chip
@@ -78,6 +96,12 @@
   (printf "ADD V%X, 0x%02X" x kk)
   (with-chip chip
     (V x (+ (V x) kk))))
+
+(defn- op-9xy0 [chip x y]
+  (printf "SNE V%02X, V%02X" x y)
+  (with-chip chip
+    (when (not= (V x) (V y))
+      (PC (+ (PC) 2)))))
 
 (defn- op-Annn [chip nnn]
   (printf "LD I, 0x%03X" nnn)
@@ -125,8 +149,12 @@
    (match nibbles
       [0 0 0xE 0] [op-00E0]
       [1 _ _ _] [op-1nnn nnn]
+      [3 _ _ _] [op-3xkk x kk]
+      [4 _ _ _] [op-4xkk x kk]
+      [5 _ _ 0x0] [op-5xy0 x y]
       [6 _ _ _] [op-6xkk x kk]
       [7 _ _ _] [op-7xkk x kk]
+      [9 _ _ 0] [op-9xy0 x y]
       [0xA _ _ _] [op-Annn nnn]
       [0xD _ _ _] [op-Dxyn x y n]
       _ [identity]))
