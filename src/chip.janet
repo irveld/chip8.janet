@@ -1,8 +1,11 @@
 (use prelude/macros)
 
-### Initialization
+(import emu/display)
 
 (def [+width+ +height+] [64 32])
+(def +scale+ 10)
+
+### Initialization
 
 (defn load [rom]
   @{:mem (buffer/blit (buffer/new-filled 4096 0) rom 0x200)
@@ -133,7 +136,7 @@
   :TODO)
 
 (defn render [chip]
-  :TODO)
+  (display/draw (chip :display) +width+ +height+ +scale+))
 
 (defn cycle [chip op]
   (ev/sleep (/ 1 60))
@@ -142,6 +145,11 @@
     (tick)
     (render)))
 
-(defn run [rom]
-  (def chip (load rom))
-  (map (partial cycle chip) (fetch chip)))
+(defn run [rom-path]
+  (let [rom (slurp rom-path)
+        chip (load rom)
+        ops (fetch chip)
+        [w h] (map * [+scale+ +scale+] [+width+ +height+])]
+    (display/with-window w h rom-path
+      (when-let [op (resume ops)]
+        (cycle chip op)))))
