@@ -152,6 +152,14 @@
       (V 0xF borrow)
       (V x result))))
 
+(defn- op-8xy6 [chip x y] # TODO: document + option for 'quirk'
+  (printf "SHR V%X{, V%X}" x y)
+  (with-chip chip
+    (let [Vx (V x)
+          sig-bit (band 1 Vx)]
+      (V 0xF sig-bit)
+      (V x (brshift Vx 1)))))
+
 (defn- op-8xy7 [chip x y]
   (printf "SUBN V%X, V%X" x y)
   (with-chip chip
@@ -160,6 +168,14 @@
           borrow (if (> Vy Vx) 1 0)]
       (V 0xF borrow)
       (V x result))))
+
+(defn- op-8xyE [chip x y] # TODO: document + option for 'quirk'
+  (printf "SHL V%X{, V%X}" x y)
+  (with-chip chip
+    (let [Vx (V x)
+          sig-bit (band 1 (brshift Vx 7))]
+      (V 0xF sig-bit)
+      (V x (blshift Vx 1)))))
 
 (defn- op-9xy0 [chip x y]
   (printf "SNE V%02X, V%02X" x y)
@@ -232,7 +248,9 @@
       [8 _ _ 3] [op-8xy3 x y]
       [8 _ _ 4] [op-8xy4 x y]
       [8 _ _ 5] [op-8xy5 x y]
+      [8 _ _ 6] [op-8xy6 x y]
       [8 _ _ 7] [op-8xy7 x y]
+      [8 _ _ 0xE] [op-8xyE x y]
       [9 _ _ 0] [op-9xy0 x y]
       [0xA _ _ _] [op-Annn nnn]
       [0xB _ _ _] [op-Bnnn nnn]
