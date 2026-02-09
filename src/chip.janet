@@ -279,7 +279,10 @@
  (instr chip ;args))
 
 (defn- tick [chip]
-  :TODO)
+  (defn decrement [timer]
+    (unless (zero? (chip timer))
+      (-- (chip timer))))
+  (map decrement [:delay :sound]))
 
 (defn- render [chip]
   (display/draw (chip :display)
