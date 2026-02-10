@@ -1,5 +1,7 @@
 (use prelude/macros)
 
+(import jaylib :as :jl)
+
 (import emu/display)
 
 (def [+width+ +height+] [64 32])
@@ -20,7 +22,9 @@
     :SP 0x0
 
     :delay 100
-    :sound 20})
+    :sound 20
+
+    :keypad (array/new-filled 16 false)})
 
 ### Helpers for reading and writing chip data
 
@@ -65,10 +69,14 @@
 (defn- timer [chip name &opt val]
   (access chip [name] val))
 
+(defn- keypad [chip key]
+  (access chip [:keypad key]))
+
 (defmacro- with-chip [chip & body]
   ~(let [fs [mem addr stack V PC SP I pixel timer]
          f |(partial $ ,chip)
-         [mem addr stack V PC SP I pixel timer] (map f fs)]
+         [mem addr stack V PC SP I
+          pixel timer keypad] (map f fs)]
      ,;body))
 
 ### Opcodes
@@ -217,6 +225,26 @@
         (V 0xF 1))
       (pixel pos :toggle))))
 
+(defn- op-Ex9E [chip x]
+  (printf "SKP V%X" x)
+  (with-chip chip
+    (when (keypad (V x))
+      (PC (+ (PC) 2)))))
+
+(defn- op-ExA1 [chip x]
+  (printf "SKNP V%X" x)
+  (with-chip chip
+    (unless (keypad (V x))
+      (PC (+ (PC) 2)))))
+
+(defn- op-Fx0A [chip x]
+  (printf "LD V%X, K" x)
+  (with-chip chip
+    (if-let [held |(when (keypad $) $)
+             key (some held (keys (chip :keypad)))]
+      (V x key)
+      (PC (- (PC) 2)))))
+
 (defn- op-Fx07 [chip x]
   (printf "LD V%X, DT" x)
   (with-chip chip
@@ -270,6 +298,23 @@
   (generate [op :iterate (byte) :until (zero? op)]
     op))
 
+(def- actual-key
+  (zipcoll
+    [0x1 0x2 0x3 0xC  # Chip8 keys (emulated)
+     0x4 0x5 0x6 0xD
+     0x7 0x8 0x9 0xE
+     0xA 0x0 0xB 0xF]
+    [:1  :2  :3  :4   # Input keys (from user)
+     :q  :w  :e  :r
+     :a  :s  :d  :f
+     :z  :x  :c  :v]))
+
+(defn- input [chip]
+  (loop [:let (keypad (chip :keypad))
+         k :in (keys keypad)
+         :let [pressed? (jl/key-down? (actual-key k))]]
+    (put keypad k pressed?)))
+
 (defn- execute [chip op]
   (def [nnn kk n y x]
     [(band op 0x0FFF)
@@ -305,7 +350,10 @@
       [0xA _ _ _] [op-Annn nnn]
       [0xB _ _ _] [op-Bnnn nnn]
       [0xD _ _ _] [op-Dxyn x y n]
+      [0xE _ 9 0xE] [op-Ex9E x]
+      [0xE _ 0xA 1] [op-ExA1 x]
       [0xF _ 0 7] [op-Fx07 x]
+      [0xF _ 0 0xA] [op-Fx0A x]
       [0xF _ 1 5] [op-Fx15 x]
       [0xF _ 1 8] [op-Fx18 x]
       [0xF _ 1 0xE] [op-Fx1E x]
@@ -327,8 +375,9 @@
     +scale+))
 
 (defn- cycle [chip op]
-  (ev/sleep (/ 1 60))
+  (ev/sleep (/ 1 1000))
   (doto chip
+    (input)
     (execute op)
     (tick)
     (render)))
