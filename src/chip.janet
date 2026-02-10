@@ -13,6 +13,8 @@
 (defn logf [fmt & xs]
   (when +log+ (printf fmt ;xs)))
 
+(def +rng+ (math/rng 0)) # NOTE: Maybe use proper seed later
+
 ### Initialization
 
 (def- font
@@ -239,6 +241,12 @@
   (with-chip chip
     (PC (+ nnn (V 0)))))
 
+(defn- op-Cxkk [chip x kk]
+  (logf "RND V%X, 0x%02X" x kk)
+  (with-chip chip
+    (let [rand (math/rng-int +rng+ 256)]
+      (V x (band kk rand)))))
+
 (defn- op-Dxyn [chip x y n]
   (logf "DRW V%X, V%X, 0x%X" x y n)
   (defn sprite-bit? [sprite col]
@@ -386,6 +394,7 @@
       [0xA _ _ _] [op-Annn nnn]
       [0xB _ _ _] [op-Bnnn nnn]
       [0xD _ _ _] [op-Dxyn x y n]
+      [0xC _ _ _] [op-Cxkk x kk]
       [0xE _ 9 0xE] [op-Ex9E x]
       [0xE _ 0xA 1] [op-ExA1 x]
       [0xF _ 0 7] [op-Fx07 x]
