@@ -62,10 +62,13 @@
         :off (buffer/bit-clear buf i)
         (buffer/bit buf i)))))
 
+(defn- timer [chip name &opt val]
+  (access chip [name] val))
+
 (defmacro- with-chip [chip & body]
-  ~(let [fs [mem addr stack V PC SP I pixel]
+  ~(let [fs [mem addr stack V PC SP I pixel timer]
          f |(partial $ ,chip)
-         [mem addr stack V PC SP I pixel] (map f fs)]
+         [mem addr stack V PC SP I pixel timer] (map f fs)]
      ,;body))
 
 ### Opcodes
@@ -214,6 +217,21 @@
         (V 0xF 1))
       (pixel pos :toggle))))
 
+(defn- op-Fx07 [chip x]
+  (printf "LD V%X, DT" x)
+  (with-chip chip
+    (V x (timer :delay))))
+
+(defn- op-Fx15 [chip x] x
+  (printf "LD DT, V%X" x)
+  (with-chip chip
+    (timer :delay (V x))))
+
+(defn- op-Fx18 [chip x] x
+  (printf "LD ST, V%X" x)
+  (with-chip chip
+    (timer :sound (V x))))
+
 (defn- op-Fx1E [chip x]
   (printf "ADD I, V%X" x)
   (with-chip chip
@@ -287,6 +305,9 @@
       [0xA _ _ _] [op-Annn nnn]
       [0xB _ _ _] [op-Bnnn nnn]
       [0xD _ _ _] [op-Dxyn x y n]
+      [0xF _ 0 7] [op-Fx07 x]
+      [0xF _ 1 5] [op-Fx15 x]
+      [0xF _ 1 8] [op-Fx18 x]
       [0xF _ 1 0xE] [op-Fx1E x]
       [0xF _ 3 3] [op-Fx33 x]
       [0xF _ 5 5] [op-Fx55 x]
