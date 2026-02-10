@@ -7,6 +7,12 @@
 (def [+width+ +height+] [64 32])
 (def +scale+ 10)
 
+(def +log+ false)
+(defn log [& xs]
+  (when +log+ (print ;xs)))
+(defn logf [fmt & xs]
+  (when +log+ (printf fmt ;xs)))
+
 ### Initialization
 
 (defn- load [rom]
@@ -82,77 +88,77 @@
 ### Opcodes
 
 (defn- op-00E0 [chip]
-  (printf "CLS")
+  (log "CLS")
   (buffer/fill (chip :display) 0))
 
 (defn- op-00EE [chip]
-  (printf "RET")
+  (log "RET")
   (with-chip chip
     (PC (stack))
     (SP (dec (SP)))))
 
 (defn- op-1nnn [chip nnn]
-  (printf "JP 0x%03X" nnn)
+  (logf "JP 0x%03X" nnn)
   (with-chip chip
     (PC nnn)))
 
 (defn- op-2nnn [chip nnn]
-  (printf "CALL 0x%03X" nnn)
+  (logf "CALL 0x%03X" nnn)
   (with-chip chip
     (SP (inc (SP)))
     (stack (PC))
     (PC nnn)))
 
 (defn- op-3xkk [chip x kk]
-  (printf "SE V%02X, 0x%03X" x kk)
+  (logf "SE V%02X, 0x%03X" x kk)
   (with-chip chip
     (when (= (V x) kk)
       (PC (+ (PC) 2)))))
 
 (defn- op-4xkk [chip x kk]
-  (printf "SNE V%02X, 0x%03X" x kk)
+  (logf "SNE V%02X, 0x%03X" x kk)
   (with-chip chip
     (when (not= (V x) kk)
       (PC (+ (PC) 2)))))
 
 (defn- op-5xy0 [chip x y]
-  (printf "SE V%02X, V%02X" x y)
+  (logf "SE V%02X, V%02X" x y)
   (with-chip chip
     (when (= (V x) (V y))
       (PC (+ (PC) 2)))))
 
 (defn- op-6xkk [chip x kk]
-  (printf "LD V%X, 0x%02X" x kk)
+  (logf "LD V%X, 0x%02X" x kk)
   (with-chip chip
     (V x kk)))
 
 (defn- op-7xkk [chip x kk]
-  (printf "ADD V%X, 0x%02X" x kk)
+  (logf "ADD V%X, 0x%02X" x kk)
   (with-chip chip
     (V x (+ (V x) kk))))
 
 (defn- op-8xy0 [chip x y]
-  (printf "LD V%X, V%X" x y)
+  (logf "LD V%X, V%X" x y)
   (with-chip chip
     (V x (V y))))
 
 (defn- op-8xy1 [chip x y]
-  (printf "OR V%X, V%X" x y)
+  (logf "OR V%X, V%X" x y)
   (with-chip chip
     (V x (bor (V x) (V y)))))
 
 (defn- op-8xy2 [chip x y]
-  (printf "AND V%X, V%X" x y)
+  (logf "AND V%X, V%X" x y)
   (with-chip chip
     (V x (band (V x) (V y)))))
 
 (defn- op-8xy3 [chip x y]
-  (printf "XOR V%X, V%X" x y)
+  (logf "XOR V%X, V%X" x y)
   (with-chip chip
     (V x (bxor (V x) (V y)))))
 
 (defn- op-8xy4 [chip x y]
-  (printf "ADD V%X, V%X" x y)
+  (logf "ADD V%X, V%X" x y)
   (with-chip chip
     (let [result (+ (V x) (V y))
           carry (if (> result 255) 1 0)]
@@ -160,7 +166,7 @@
       (V 0xF carry))))
 
 (defn- op-8xy5 [chip x y]
-  (printf "SUB V%X, V%X" x y)
+  (logf "SUB V%X, V%X" x y)
   (with-chip chip
     (let [[Vx Vy] (map V [x y])
           result (- Vx Vy)
@@ -169,7 +175,7 @@
       (V 0xF borrow))))
 
 (defn- op-8xy6 [chip x y] # TODO: document + option for 'quirk'
-  (printf "SHR V%X{, V%X}" x y)
+  (logf "SHR V%X{, V%X}" x y)
   (with-chip chip
     (let [Vx (V x)
           sig-bit (band 1 Vx)]
@@ -177,7 +183,7 @@
       (V 0xF sig-bit))))
 
 (defn- op-8xy7 [chip x y]
-  (printf "SUBN V%X, V%X" x y)
+  (logf "SUBN V%X, V%X" x y)
   (with-chip chip
     (let [[Vx Vy] (map V [x y])
           result (- Vy Vx)
@@ -186,7 +192,7 @@
       (V 0xF borrow))))
 
 (defn- op-8xyE [chip x y] # TODO: document + option for 'quirk'
-  (printf "SHL V%X{, V%X}" x y)
+  (logf "SHL V%X{, V%X}" x y)
   (with-chip chip
     (let [Vx (V x)
           sig-bit (band 1 (brshift Vx 7))]
@@ -194,23 +200,23 @@
       (V 0xF sig-bit))))
 
 (defn- op-9xy0 [chip x y]
-  (printf "SNE V%02X, V%02X" x y)
+  (logf "SNE V%02X, V%02X" x y)
   (with-chip chip
     (when (not= (V x) (V y))
       (PC (+ (PC) 2)))))
 
 (defn- op-Annn [chip nnn]
-  (printf "LD I, 0x%03X" nnn)
+  (logf "LD I, 0x%03X" nnn)
   (with-chip chip
     (I nnn)))
 
 (defn- op-Bnnn [chip nnn]
-  (printf "JP V0, 0x%03X" nnn)
+  (logf "JP V0, 0x%03X" nnn)
   (with-chip chip
     (PC (+ nnn (V 0)))))
 
 (defn- op-Dxyn [chip x y n]
-  (printf "DRW V%X, V%X, 0x%X" x y n)
+  (logf "DRW V%X, V%X, 0x%X" x y n)
   (defn sprite-bit? [sprite col]
     (not (zero? (band sprite (brshift 0x80 col)))))
   (with-chip chip
@@ -226,19 +232,19 @@
       (pixel pos :toggle))))
 
 (defn- op-Ex9E [chip x]
-  (printf "SKP V%X" x)
+  (logf "SKP V%X" x)
   (with-chip chip
     (when (keypad (V x))
       (PC (+ (PC) 2)))))
 
 (defn- op-ExA1 [chip x]
-  (printf "SKNP V%X" x)
+  (logf "SKNP V%X" x)
   (with-chip chip
     (unless (keypad (V x))
       (PC (+ (PC) 2)))))
 
 (defn- op-Fx0A [chip x]
-  (printf "LD V%X, K" x)
+  (logf "LD V%X, K" x)
   (with-chip chip
     (if-let [held |(when (keypad $) $)
              key (some held (keys (chip :keypad)))]
@@ -246,27 +252,27 @@
       (PC (- (PC) 2)))))
 
 (defn- op-Fx07 [chip x]
-  (printf "LD V%X, DT" x)
+  (logf "LD V%X, DT" x)
   (with-chip chip
     (V x (timer :delay))))
 
 (defn- op-Fx15 [chip x] x
-  (printf "LD DT, V%X" x)
+  (logf "LD DT, V%X" x)
   (with-chip chip
     (timer :delay (V x))))
 
 (defn- op-Fx18 [chip x] x
-  (printf "LD ST, V%X" x)
+  (logf "LD ST, V%X" x)
   (with-chip chip
     (timer :sound (V x))))
 
 (defn- op-Fx1E [chip x]
-  (printf "ADD I, V%X" x)
+  (logf "ADD I, V%X" x)
   (with-chip chip
     (I (+ (I) (V x)))))
 
 (defn- op-Fx33 [chip x]
-  (printf "LD B, V%X" x)
+  (logf "LD B, V%X" x)
   (with-chip chip
     (let [I (I) Vx (V x)]
      (addr I (div (mod Vx 1000) 100))
@@ -274,14 +280,14 @@
      (addr (+ I 2) (div (mod Vx 10) 1)))))
 
 (defn- op-Fx55 [chip x]
-  (printf "LD [I], V%X" x)
+  (logf "LD [I], V%X" x)
   (with-chip chip
     (let [start 0
           end (inc x)]
       (buffer/blit (mem) (V) (I) start end))))
 
 (defn- op-Fx65 [chip x]
-  (printf "LD V%X, [I]" x)
+  (logf "LD V%X, [I]" x)
   (with-chip chip
     (let [start (I)
           end (+ start (inc x))]
@@ -325,7 +331,6 @@
  (def nibbles
    (seq [shift :down-to (12 0 4)]
      (band 0x000F (brshift op shift))))
- (print (string ;(map |(string/format "%X" $) nibbles)))
  (def [instr & args]
    (match nibbles
       [0 0 0xE 0] [op-00E0]
