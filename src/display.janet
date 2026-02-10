@@ -33,7 +33,6 @@
 (defmacro with-window [width height title & body]
   ~(do
     (,jl/init-window ,width ,height ,title)
-    (,jl/set-target-fps 60)
     (,jl/hide-cursor)
 
     (while (not (,jl/window-should-close))
