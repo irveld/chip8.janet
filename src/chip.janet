@@ -78,11 +78,14 @@
 (defn- keypad [chip key]
   (access chip [:keypad key]))
 
+(defn skip [chip]
+  (+= (chip :PC) 2))
+
 (defmacro- with-chip [chip & body]
-  ~(let [fs [mem addr stack V PC SP I pixel timer]
+  ~(let [fs [mem addr stack V PC SP I pixel timer keypad skip]
          f |(partial $ ,chip)
          [mem addr stack V PC SP I
-          pixel timer keypad] (map f fs)]
+          pixel timer keypad skip] (map f fs)]
      ,;body))
 
 ### Opcodes
@@ -113,19 +116,19 @@
   (logf "SE V%02X, 0x%03X" x kk)
   (with-chip chip
     (when (= (V x) kk)
-      (PC (+ (PC) 2)))))
+      (skip))))
 
 (defn- op-4xkk [chip x kk]
   (logf "SNE V%02X, 0x%03X" x kk)
   (with-chip chip
     (when (not= (V x) kk)
-      (PC (+ (PC) 2)))))
+      (skip))))
 
 (defn- op-5xy0 [chip x y]
   (logf "SE V%02X, V%02X" x y)
   (with-chip chip
     (when (= (V x) (V y))
-      (PC (+ (PC) 2)))))
+      (skip))))
 
 (defn- op-6xkk [chip x kk]
   (logf "LD V%X, 0x%02X" x kk)
@@ -203,7 +206,7 @@
   (logf "SNE V%02X, V%02X" x y)
   (with-chip chip
     (when (not= (V x) (V y))
-      (PC (+ (PC) 2)))))
+      (skip))))
 
 (defn- op-Annn [chip nnn]
   (logf "LD I, 0x%03X" nnn)
