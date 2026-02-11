@@ -15,11 +15,11 @@
           ];
 
           buildInputs = [
-            xorg.libX11
-            xorg.libXcursor
-            xorg.libXi
-            xorg.libXinerama
-            xorg.libXrandr
+            libX11
+            libXcursor
+            libXi
+            libXinerama
+            libXrandr
           ];
 
           shellHook = ''
