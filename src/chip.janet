@@ -420,19 +420,23 @@
     +width+ +height+
     +scale+))
 
-(defn- cycle [chip op]
-  (ev/sleep (/ 1 1000))
-  (doto chip
-    (input)
-    (execute op)
-    (tick)
-    (render)))
-
 (defn run [rom-path]
   (let [rom (slurp rom-path)
         chip (load rom)
         ops (fetch chip)
         [w h] (map * [+scale+ +scale+] [+width+ +height+])]
+    (var time 0)
     (display/with-window w h rom-path
-      (when-let [op (resume ops)]
-        (cycle chip op)))))
+      (input chip)
+
+      (when (< (/ 1 60) time)
+        (tick chip)
+        (set time 0))
+
+      (repeat 10
+        (when-let [op (resume ops)]
+          (execute chip op)))
+
+      (render chip)
+
+      (+= time (jl/get-frame-time)))))
