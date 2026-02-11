@@ -2,7 +2,7 @@
 
 (defn coord->index [x y width height]
   (let [[px py] (map % [x y] [width height])
-        index (+ x (* y width))]
+        index (+ px (* py width))]
     index))
 
 (defn- rgb255->rgb1 [r g b]
