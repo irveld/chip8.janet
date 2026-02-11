@@ -95,7 +95,7 @@
 (defn- keypad [chip key]
   (access chip [:keypad key]))
 
-(defn skip [chip]
+(defn- skip [chip]
   (+= (chip :PC) 2))
 
 (defmacro- with-chip [chip & body]
