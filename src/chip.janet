@@ -171,17 +171,20 @@
 (defn- op-8xy1 [chip x y]
   (logf "OR V%X, V%X" x y)
   (with-chip chip
-    (V x (bor (V x) (V y)))))
+    (V x (bor (V x) (V y)))
+    (V 0xF 0)))
 
 (defn- op-8xy2 [chip x y]
   (logf "AND V%X, V%X" x y)
   (with-chip chip
-    (V x (band (V x) (V y)))))
+    (V x (band (V x) (V y)))
+    (V 0xF 0)))
 
 (defn- op-8xy3 [chip x y]
   (logf "XOR V%X, V%X" x y)
   (with-chip chip
-    (V x (bxor (V x) (V y)))))
+    (V x (bxor (V x) (V y)))
+    (V 0xF 0)))
 
 (defn- op-8xy4 [chip x y]
   (logf "ADD V%X, V%X" x y)
