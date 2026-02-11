@@ -182,8 +182,9 @@
       (V x result)
       (V 0xF borrow))))
 
-(defn- op-8xy6 "SHR Vx" [chip x y] # TODO: document + option for 'quirk'
+(defn- op-8xy6 "SHR Vx" [chip x y]
   (with-chip chip
+    (V x (V y))
     (let [Vx (V x)
           sig-bit (band 1 Vx)]
       (V x (brshift Vx 1))
@@ -197,8 +198,9 @@
       (V x result)
       (V 0xF borrow))))
 
-(defn- op-8xyE "SHL Vx" [chip x y] # TODO: document + option for 'quirk'
+(defn- op-8xyE "SHL Vx" [chip x y]
   (with-chip chip
+    (V x (V y))
     (let [Vx (V x)
           sig-bit (band 1 (brshift Vx 7))]
       (V x (blshift Vx 1))
