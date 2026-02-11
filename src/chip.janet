@@ -299,12 +299,10 @@
 
 (defn- fetch [chip]
   (defn nibble []
-    (let [pc (dec (++ (chip :PC)))]
-      ((chip :mem) pc)))
-  (defn byte []
-    (bor (blshift (nibble) 8) (nibble)))
-  (generate [op :iterate (byte) :until (zero? op)]
-    op))
+    ((chip :mem) (dec (++ (chip :PC)))))
+  (let [ab (blshift (nibble) 8)
+        cd (nibble)]
+   (bor ab cd)))
 
 (def- actual-key
   (zipcoll
@@ -324,53 +322,51 @@
     (put keypad k pressed?)))
 
 (defn- execute [chip op]
-  (def [nnn kk n y x]
-    [(band op 0x0FFF)
-     (band op 0x00FF)
-     (band op 0x000F)
-     (brshift (band op 0x00F0) 4)
-     (brshift (band op 0x0F00) 8)])
- (def nibbles
-   (seq [shift :down-to (12 0 4)]
-     (band 0x000F (brshift op shift))))
- (def [instr & args]
-   (match nibbles
-      [0 0 0xE 0] [op-00E0]
-      [0 0 0xE 0xE] [op-00EE]
-      [1 _ _ _] [op-1nnn nnn]
-      [2 _ _ _] [op-2nnn nnn]
-      [3 _ _ _] [op-3xkk x kk]
-      [4 _ _ _] [op-4xkk x kk]
-      [5 _ _ 0] [op-5xy0 x y]
-      [6 _ _ _] [op-6xkk x kk]
-      [7 _ _ _] [op-7xkk x kk]
-      [8 _ _ 0] [op-8xy0 x y]
-      [8 _ _ 1] [op-8xy1 x y]
-      [8 _ _ 2] [op-8xy2 x y]
-      [8 _ _ 3] [op-8xy3 x y]
-      [8 _ _ 4] [op-8xy4 x y]
-      [8 _ _ 5] [op-8xy5 x y]
-      [8 _ _ 6] [op-8xy6 x y]
-      [8 _ _ 7] [op-8xy7 x y]
-      [8 _ _ 0xE] [op-8xyE x y]
-      [9 _ _ 0] [op-9xy0 x y]
-      [0xA _ _ _] [op-Annn nnn]
-      [0xB _ _ _] [op-Bnnn nnn]
-      [0xD _ _ _] [op-Dxyn x y n]
-      [0xC _ _ _] [op-Cxkk x kk]
-      [0xE _ 9 0xE] [op-Ex9E x]
-      [0xE _ 0xA 1] [op-ExA1 x]
-      [0xF _ 0 7] [op-Fx07 x]
-      [0xF _ 0 0xA] [op-Fx0A x]
-      [0xF _ 1 5] [op-Fx15 x]
-      [0xF _ 1 8] [op-Fx18 x]
-      [0xF _ 1 0xE] [op-Fx1E x]
-      [0xF _ 2 9] [op-Fx29 x]
-      [0xF _ 3 3] [op-Fx33 x]
-      [0xF _ 5 5] [op-Fx55 x]
-      [0xF _ 6 5] [op-Fx65 x]
-      _ [identity]))
- (instr chip ;args))
+  (let [[nnn kk n y x] [(band op 0x0FFF)
+                        (band op 0x00FF)
+                        (band op 0x000F)
+                        (brshift (band op 0x00F0) 4)
+                        (brshift (band op 0x0F00) 8)]
+        nibbles (seq [shift :down-to (12 0 4)]
+                  (band 0x000F (brshift op shift)))]
+    (def [instr & args]
+      (match nibbles
+         [0 0 0xE 0] [op-00E0]
+         [0 0 0xE 0xE] [op-00EE]
+         [1 _ _ _] [op-1nnn nnn]
+         [2 _ _ _] [op-2nnn nnn]
+         [3 _ _ _] [op-3xkk x kk]
+         [4 _ _ _] [op-4xkk x kk]
+         [5 _ _ 0] [op-5xy0 x y]
+         [6 _ _ _] [op-6xkk x kk]
+         [7 _ _ _] [op-7xkk x kk]
+         [8 _ _ 0] [op-8xy0 x y]
+         [8 _ _ 1] [op-8xy1 x y]
+         [8 _ _ 2] [op-8xy2 x y]
+         [8 _ _ 3] [op-8xy3 x y]
+         [8 _ _ 4] [op-8xy4 x y]
+         [8 _ _ 5] [op-8xy5 x y]
+         [8 _ _ 6] [op-8xy6 x y]
+         [8 _ _ 7] [op-8xy7 x y]
+         [8 _ _ 0xE] [op-8xyE x y]
+         [9 _ _ 0] [op-9xy0 x y]
+         [0xA _ _ _] [op-Annn nnn]
+         [0xB _ _ _] [op-Bnnn nnn]
+         [0xD _ _ _] [op-Dxyn x y n]
+         [0xC _ _ _] [op-Cxkk x kk]
+         [0xE _ 9 0xE] [op-Ex9E x]
+         [0xE _ 0xA 1] [op-ExA1 x]
+         [0xF _ 0 7] [op-Fx07 x]
+         [0xF _ 0 0xA] [op-Fx0A x]
+         [0xF _ 1 5] [op-Fx15 x]
+         [0xF _ 1 8] [op-Fx18 x]
+         [0xF _ 1 0xE] [op-Fx1E x]
+         [0xF _ 2 9] [op-Fx29 x]
+         [0xF _ 3 3] [op-Fx33 x]
+         [0xF _ 5 5] [op-Fx55 x]
+         [0xF _ 6 5] [op-Fx65 x]
+         _ [identity]))
+    (instr chip ;args)))
 
 (defn- tick [chip]
   (defn decrement [timer]
@@ -383,23 +379,21 @@
     +width+ +height+
     +scale+))
 
+(defn- cycle [chip]
+  (render chip)
+  (input chip)
+  (repeat 100
+    (execute chip (fetch chip))))
+
 (defn run [rom-path]
   (let [rom (slurp rom-path)
         chip (load rom)
-        ops (fetch chip)
         [w h] (map * [+scale+ +scale+] [+width+ +height+])]
     (var time 0)
     (display/with-window w h rom-path
-      (input chip)
-
-      (when (< (/ 1 60) time)
-        (tick chip)
-        (set time 0))
-
-      (repeat 10
-        (when-let [op (resume ops)]
-          (execute chip op)))
-
-      (render chip)
-
-      (+= time (jl/get-frame-time)))))
+      (cycle chip)
+      (let [period (/ 1 60)
+            delta (jl/get-frame-time)]
+        (when (< period (+= time delta))
+          (tick chip)
+          (set time 0))))))
