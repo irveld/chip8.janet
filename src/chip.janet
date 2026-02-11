@@ -287,13 +287,15 @@
   (with-chip chip
     (let [start 0
           end (inc x)]
-      (buffer/blit (mem) (V) (I) start end))))
+      (buffer/blit (mem) (V) (I) start end)
+      (I (+ 1 (I) x)))))
 
 (defn- op-Fx65 "LD Vx, [I]" [chip x]
   (with-chip chip
     (let [start (I)
           end (+ start (inc x))]
-      (buffer/blit (V) (mem) 0 start end))))
+      (buffer/blit (V) (mem) 0 start end)
+      (I (+ 1 (I) x)))))
 
 ### Main cycle
 
