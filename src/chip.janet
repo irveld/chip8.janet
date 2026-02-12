@@ -363,7 +363,7 @@
 (defn- cycle [chip]
   (render chip)
   (input chip)
-  (repeat 100
+  (repeat 10
     (execute chip (fetch chip))))
 
 (defn run [rom-path]
