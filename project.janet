@@ -10,8 +10,12 @@
 (declare-source
   :prefix "emu"
   :source
-  ["src/chip.janet"
-   "src/display.janet"])
+  ["emu/chip.janet"
+   "emu/config.janet"
+   "emu/display.janet"
+   "emu/input.janet"
+   "emu/opcodes.janet"])
 
-(declare-binscript :main "src/emu"
+(declare-binscript
+  :main "emu/emu"
   :hardcode-syspath true)

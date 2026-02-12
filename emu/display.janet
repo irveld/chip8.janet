@@ -1,5 +1,9 @@
 (import jaylib :as jl)
 
+(def +scale+ 10)
+
+### --- Helpers ------------------------------------------
+
 (defn coord->index [x y width height]
   (let [[px py] (map % [x y] [width height])
         index (+ px (* py width))]
@@ -13,22 +17,26 @@
              :bg [20 20 20]}]
     (rgb255->rgb1 ;(col key))))
 
-(defn draw [buf width height &opt scale]
-  (default scale 1)
+### --- Display ------------------------------------------
+
+(defn render [chip]
+  (def [buf w h] (map chip [:display :width :height]))
 
   (defn draw? [x y]
-    (buffer/bit buf (coord->index x y width height)))
+    (buffer/bit buf (coord->index x y w h)))
 
   (defn square [x y]
-    (let [dimensions [scale scale]
+    (let [dimensions [+scale+ +scale+]
           pos (map * dimensions [x y])
           color (palette :fg)]
       (jl/draw-rectangle-v pos dimensions color)))
 
-  (loop [y :range [0 height]
-         x :range [0 width]
+  (loop [y :range [0 h]
+         x :range [0 w]
          :when (draw? x y)]
-    (square x y)))
+    (square x y))
+
+  chip)
 
 (defmacro with-window [width height title & body]
   ~(do
