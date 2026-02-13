@@ -4,35 +4,19 @@
 ### --- Helpers ------------------------------------------
 
 (defn- access [chip dst &opt val]
-  (if (nil? val)
-    (get-in chip dst)
-    (put-in chip dst val)))
-
-(defn- mem [chip &opt val]
-  (access chip [:mem] val))
-
-(defn- addr [chip nnn &opt val]
-  (access chip [:mem nnn] val))
+  (let [ks (filter identity dst)]
+    (if (nil? val)
+      (get-in chip ks)
+      (put-in chip ks val))))
 
 (defn- stack [chip &opt val]
   (access chip [:stack (chip :SP)] val))
 
-(defn- V [chip &opt reg val]
-  (if (nil? reg)
-    (access chip [:V] val)
-    (access chip [:V reg] val)))
+(defn- skip [chip]
+  (+= (chip :PC) 2))
 
-(defn- PC [chip &opt val]
-  (access chip [:PC] val))
-
-(defn- SP [chip &opt val]
-  (access chip [:SP] val))
-
-(defn- I [chip &opt val]
-  (access chip [:I] val))
-
-(defn- display [chip &opt val]
-  (access chip [:display] val))
+(defn- timer [chip name &opt val]
+  (access chip [name] val))
 
 (defn- pixel [chip &opt pos action]
   (let [[buf w h] (map chip [:display :width :height])
@@ -44,27 +28,19 @@
         :off (buffer/bit-clear buf i)
         (buffer/bit buf i)))))
 
-(defn- timer [chip name &opt val]
-  (access chip [name] val))
+(each key [:PC :SP :I :delay :sound]
+  (defglobal key (fn [chip &opt val]
+                   (access chip [key] val))))
+(each key [:V :mem :display :keypad]
+  (defglobal key (fn [chip &opt index val]
+                   (access chip [key index] val))))
 
-(defn- keypad [chip &opt key]
-  (if (nil? key)
-   (access chip [:keypad])
-   (access chip [:keypad key])))
-
-(defn- skip [chip]
-  (+= (chip :PC) 2))
-
-# TODO: Fix this mess
 (defmacro- with-chip [chip & body]
-  ~(let [fs [mem addr stack
-              V PC SP I
-              pixel timer keypad skip display]
-          f |(partial $ ,chip)
-          [mem addr stack
-           V PC SP I
-           pixel timer keypad skip display] (map f fs)]
-      ,;body))
+  ~(let [fix |(partial $ ,chip)
+         [mem stack V PC SP I] (map fix [mem stack V PC SP I])
+         [pixel display keypad] (map fix [pixel display keypad])
+         [timer skip] (map fix [timer skip])]
+    ,;body))
 
 (defmacro defop [op args & body]
   (def $chip (gensym))
@@ -74,9 +50,7 @@
 
 ### --- Opcodes ------------------------------------------
 
-# Clear the display
-(defop op-00E0 []
-  (buffer/fill (display) 0))
+## Subroutines
 
 # Return from current subroutine
 (defop op-00EE []
@@ -93,6 +67,12 @@
   (stack (PC))
   (PC nnn))
 
+# Jump to address (nnn + V0)
+(defop op-Bnnn [nnn]
+  (PC (+ nnn (V 0))))
+
+## Comparisons
+
 # Skip next instruction if Vx = kk
 (defop op-3xkk [x kk]
   (when (= (V x) kk) (skip)))
@@ -105,6 +85,12 @@
 (defop op-5xy0 [x y]
   (when (= (V x) (V y)) (skip)))
 
+# Skip next instruction if Vx != Vy
+(defop op-9xy0 [x y]
+  (when (not= (V x) (V y)) (skip)))
+
+## Arithmetic operations
+
 # Vx = kk
 (defop op-6xkk [x kk]
   (V x kk))
@@ -116,20 +102,6 @@
 # Vx = Vy
 (defop op-8xy0 [x y]
   (V x (V y)))
-
-# Vx = Vx OR Vy
-(defop op-8xy1 [x y]
-  (V x (bor (V x) (V y))))
-
-# Vx = Vx AND Vy, then reset the flag register
-(defop op-8xy2 [x y]
-  (V x (band (V x) (V y)))
-  (V 0xF 0))
-
-# Vx = Vx XOR Vy, then reset the flag register
-(defop op-8xy3 [x y]
-  (V x (bxor (V x) (V y)))
-  (V 0xF 0))
 
 # Vx += Vy, then indicate carry in flag register
 (defop op-8xy4 [x y]
@@ -146,14 +118,6 @@
     (V x result)
     (V 0xF borrow)))
 
-# Vx = Vy, shift Vx left by 1, then store LSB in flag register
-(defop op-8xy6 [x y]
-  (V x (V y))
-  (let [Vx (V x)
-        lsb (band 1 Vx)]
-    (V x (brshift Vx 1))
-    (V 0xF lsb)))
-
 # Vx = Vy - Vx, then indicate -no borrow- in flag register
 (defop op-8xy7 [x y]
   (let [[Vx Vy] (map V [x y])
@@ -161,6 +125,30 @@
         borrow (if (>= Vy Vx) 1 0)]
     (V x result)
     (V 0xF borrow)))
+
+## Bitwise operations
+
+# Vx = Vx OR Vy
+(defop op-8xy1 [x y]
+  (V x (bor (V x) (V y))))
+
+# Vx = Vx AND Vy, then reset the flag register
+(defop op-8xy2 [x y]
+  (V x (band (V x) (V y)))
+  (V 0xF 0))
+
+# Vx = Vx XOR Vy, then reset the flag register
+(defop op-8xy3 [x y]
+  (V x (bxor (V x) (V y)))
+  (V 0xF 0))
+
+# Vx = Vy, shift Vx left by 1, then store LSB in flag register
+(defop op-8xy6 [x y]
+  (V x (V y))
+  (let [Vx (V x)
+        lsb (band 1 Vx)]
+    (V x (brshift Vx 1))
+    (V 0xF lsb)))
 
 # Vx = Vy, shift Vx left by 1, then store MSB in flag register
 (defop op-8xyE [x y]
@@ -170,22 +158,22 @@
     (V x (blshift Vx 1))
     (V 0xF msb)))
 
-# Skip next instruction if Vx != Vy
-(defop op-9xy0 [x y]
-  (when (not= (V x) (V y)) (skip)))
-
-# I = nnn
-(defop op-Annn [nnn]
-  (I nnn))
-
-# Jump to address (nnn + V0)
-(defop op-Bnnn [nnn]
-  (PC (+ nnn (V 0))))
-
 # Vx = kk AND (random byte)
 (defop op-Cxkk [x byte]
   (let [rand (math/rng-int +rng+ 256)]
     (V x (band byte rand))))
+
+## Display
+
+# Clear the display
+(defop op-00E0 []
+  (buffer/fill (display) 0))
+
+# I = (address of font sprite for digit corresponding to Vx)
+(defop op-Fx29 [x]
+  (let [start 0x050
+        offset (* 5 (V x))]
+    (I (+ start offset))))
 
 # Draw n bytes from address I at coordinates (Vx, Vy),
 # then indicate collision in flag register
@@ -194,7 +182,7 @@
     (not (zero? (band sprite (brshift 0x80 col)))))
   (V 0xF 0)
   (loop [row :range [0 n]
-         :let [sprite (addr (+ row (I)))]
+         :let [sprite (mem (+ row (I)))]
          col :range [0 8]
          :when (sprite-bit? sprite col)
          :let [[Vx Vy] (map V [x y])
@@ -203,26 +191,11 @@
       (V 0xF 1))
     (pixel pos :toggle)))
 
-# Skip next instruction if key Vx is pressed
-(defop op-Ex9E [x]
-  (when (keypad (V x))
-    (PC (+ (PC) 2))))
-
-# Skip next instruction if key Vx is not pressed
-(defop op-ExA1 [x]
-  (unless (keypad (V x))
-    (PC (+ (PC) 2))))
+## Timers
 
 # Vx = Delay timer
 (defop op-Fx07 [x]
   (V x (timer :delay)))
-
-# Vx = (key of next keypress)
-(defop op-Fx0A [x]
-  (if-let [held |(when (keypad $) $)
-           key (some held (keys (keypad)))]
-    (V x key)
-    (PC (- (PC) 2))))
 
 # Delay timer = Vx
 (defop op-Fx15 [x]
@@ -232,22 +205,26 @@
 (defop op-Fx18 [x]
   (timer :sound (V x)))
 
-# I += Vx
-(defop op-Fx1E [x]
-  (I (+ (I) (V x))))
+## Keypad
 
-# I = (address of font sprite for digit corresponding to Vx)
-(defop op-Fx29 [x]
-  (let [start 0x050
-        offset (* 5 (V x))]
-    (I (+ start offset))))
+# Skip next instruction if key Vx is pressed
+(defop op-Ex9E [x]
+  (when (keypad (V x))
+    (PC (+ (PC) 2))))
 
-# Set I, I+1, I+2 to the 100's, 10's, and 1's digits of Vx
-(defop op-Fx33 [x]
-  (let [Vx (V x) I (I)]
-    (addr (+ I 0) (div (mod Vx 1000) 100))
-    (addr (+ I 1) (div (mod Vx 100) 10))
-    (addr (+ I 2) (div (mod Vx 10) 1))))
+# Skip next instruction if key Vx is not pressed
+(defop op-ExA1 [x]
+  (unless (keypad (V x))
+    (PC (+ (PC) 2)))
+
+ Vx = (key of next keypress))
+(defop op-Fx0A [x]
+  (if-let [held |(when (keypad $) $)
+           key (some held (keys (keypad)))]
+    (V x key)
+    (PC (- (PC) 2))))
+
+## Saving/loading registers
 
 # Set values at I ... (I + x + 1) to V0 ... Vx
 (defop op-Fx55 [x]
@@ -263,3 +240,19 @@
     (buffer/blit (V) (mem) 0 start end)
     (I (+ 1 (I) x))))
 
+## Misc
+
+# I = nnn
+(defop op-Annn [nnn]
+  (I nnn))
+
+# I += Vx
+(defop op-Fx1E [x]
+  (I (+ (I) (V x))))
+
+# Set I, I+1, I+2 to the 100's, 10's, and 1's digits of Vx
+(defop op-Fx33 [x]
+  (let [Vx (V x) I (I)]
+    (mem (+ I 0) (div (mod Vx 1000) 100))
+    (mem (+ I 1) (div (mod Vx 100) 10))
+    (mem (+ I 2) (div (mod Vx 10) 1))))

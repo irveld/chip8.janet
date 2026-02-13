@@ -114,15 +114,15 @@
   (let [rom (slurp rom-path)
         chip (load rom)
         [w h] (map chip [:width :height])]
-      (var time 0)
-      (display/with-window (* +scale+ w) (* +scale+ h) rom-path
-        (ev/sleep (/ 1 +framerate+))
-        (->> chip
-          (display/render)
-          (input/handle)
-          (tick))
-        (repeat +clock+
-          (->>
-            (fetch chip)
-            (decode chip)
-            (execute chip))))))
+    (var time 0)
+    (display/with-window (* +scale+ w) (* +scale+ h) rom-path
+      (ev/sleep (/ 1 +framerate+))
+      (->> chip
+        (display/render)
+        (input/handle)
+        (tick))
+      (repeat +clock+
+        (->>
+          (fetch chip)
+          (decode chip)
+          (execute chip))))))
